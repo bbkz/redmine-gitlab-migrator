@@ -133,9 +133,7 @@ class WikiPageConverter():
         self.textile_converter = TextileConverter()
 
     def convert(self, redmine_page):
-        title = (self.textile_converter.normalize(redmine_page["title"])
-                 if 'parent' in redmine_page
-                 else 'home')
+        title = redmine_page['path']
         print("Converting {} ({} version {})".format(title, redmine_page["title"], redmine_page["version"]))
 
         text = redmine_page.get('text', "")
@@ -149,7 +147,7 @@ class WikiPageConverter():
         text = text.replace("{{lastupdated_at}}", redmine_page["updated_on"])
         text = text.replace("{{lastupdated_by}}", redmine_page["author"]["name"])
         text = text.replace("[[PageOutline]]", "")
-        text = text.replace("{{>toc}}", "")
+        text = text.replace("{{>toc}}", "REPLACETOC")
 
         text = self.textile_converter.convert(text)
 
