@@ -184,9 +184,6 @@ def perform_migrate_pages(args):
     redmine = RedmineClient(args.redmine_key, args.no_verify)
     redmine_project = RedmineProject(args.redmine_project_url, redmine)
 
-    # Get copy of GitLab wiki repository
-    wiki = WikiPageConverter(args.gitlab_wiki)
-
     # create work dict
     work = {}
     for p in redmine_project.get_all_pages():
@@ -215,6 +212,9 @@ def perform_migrate_pages(args):
                 if p == 'WikiStart':
                     p = 'home'
                 if ischild != '':
+                    # create the tree folder structure
+                    if not os.path.exists(ischild):
+                       os.makedirs(ischild, exist_ok=True)
                     ret[p] = os.path.join(ischild, p)
                 else:
                     ret[p] = p
@@ -235,13 +235,12 @@ def perform_migrate_pages(args):
         idxcont += spaces + "* ["+k+"]("+e+")\n"
 
     # write tree index file
-    f = open(args.gitlab_wiki + "/index.md", "w")
-    f.write(idxcont)
-    f.close()
+    with open(args.gitlab_wiki + "/index.md", "w") as f:
+        f.write(idxcont)
 
     # add tree index to git repo
     repo = Repo(args.gitlab_wiki)
-    repo.index.add('index.md')
+    repo.index.add(['index.md'])
     repo.index.commit("add new index file")
 
     # convert all pages including history
@@ -259,6 +258,9 @@ def perform_migrate_pages(args):
 
     # sort everything by date and convert
     pages.sort(key=lambda page: page["updated_on"])
+
+    # Get copy of GitLab wiki repository
+    wiki = WikiPageConverter(args.gitlab_wiki, tree)
 
     for page in pages:
         wiki.convert(page)

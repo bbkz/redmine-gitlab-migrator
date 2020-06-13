@@ -8,7 +8,7 @@ import unicodedata
 log = logging.getLogger(__name__)
 
 class TextileConverter():
-    def __init__(self):
+    def __init__(self, tree = False):
         # make sure we use at least version 17 of pandoc
         # TODO: fix this test, it will not work properly for version 1.2 or 1.100
         version = pypandoc.get_pandoc_version()
@@ -30,12 +30,18 @@ class TextileConverter():
         self.regexCodeHighlight = re.compile(r'(<code\s?(class=\"(.*)\")?>).*(</code>)', re.MULTILINE | re.DOTALL)
         self.regexAttachment = re.compile(r'attachment:[\'\"“”‘’„”«»](.*)[\'\"“”‘’„”«»]', re.MULTILINE | re.DOTALL)
 
+        # tree view for wiki pages
+        self.tree = tree
+
     def wiki_link(self, match):
         name = match.group(1)
         if len(match.groups()) > 1:
             text = match.group(2)
         else:
             text = name
+
+        if name in self.tree:
+            name = self.tree[name]
 
         name = self.normalize(name).replace(' ', '_')
         return '[{}]({})'.format(text, name)
@@ -119,7 +125,7 @@ class WikiPageConverter():
     http://www.redmine.org/projects/redmine/wiki/RedmineTextFormattingTextile
     """
 
-    def __init__(self, local_repo_path):
+    def __init__(self, local_repo_path, tree = False):
         self.repo_path = local_repo_path
         self.repo = Repo(local_repo_path)
 
@@ -130,10 +136,10 @@ class WikiPageConverter():
             log.error('You need at least pandoc 1.17.0, download from http://pandoc.org/installing.html')
             exit(1)
 
-        self.textile_converter = TextileConverter()
+        self.textile_converter = TextileConverter(tree)
 
     def convert(self, redmine_page):
-        title = redmine_page['path']
+        title = self.textile_converter.normalize(redmine_page['path'])
         print("Converting {} ({} version {})".format(title, redmine_page["title"], redmine_page["version"]))
 
         text = redmine_page.get('text', "")
@@ -143,13 +149,16 @@ class WikiPageConverter():
         with open(self.repo_path + "/" + file_name, mode='wt', encoding='utf-8') as fd:
             print(text, file=fd)
 
-        # replace some contents
+        # replace some contents in textile
         text = text.replace("{{lastupdated_at}}", redmine_page["updated_on"])
         text = text.replace("{{lastupdated_by}}", redmine_page["author"]["name"])
         text = text.replace("[[PageOutline]]", "")
         text = text.replace("{{>toc}}", "REPLACETOC")
 
         text = self.textile_converter.convert(text)
+
+        # replace some contents in markdown
+        text = text.replace("REPLACETOC", "[[_TOC_]]")
 
         # save file with author/date
         file_name = title + ".md"
