@@ -33,6 +33,8 @@ Does
 - Migration of wiki pages including history:
   - versions become older commits
   - author names (without email addresses!) are the author/committer names
+  - pages with parents are moved into folders
+  - links on pages to moved pages are rewritten
 
 Does not
 --------
