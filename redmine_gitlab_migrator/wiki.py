@@ -8,7 +8,7 @@ import unicodedata
 log = logging.getLogger(__name__)
 
 class TextileConverter():
-    def __init__(self, tree = False):
+    def __init__(self, tree = False, textformat = 'textile'):
         # make sure we use at least version 17 of pandoc
         # TODO: fix this test, it will not work properly for version 1.2 or 1.100
         version = pypandoc.get_pandoc_version()
@@ -32,6 +32,9 @@ class TextileConverter():
 
         # tree view for wiki pages
         self.tree = tree
+
+        # markdown text
+        self.textformat = textformat
 
     def wiki_link(self, match):
         name = match.group(1)
@@ -69,7 +72,8 @@ class TextileConverter():
 
         # convert from textile to markdown
         try:
-            text = pypandoc.convert_text(text, 'markdown_strict', format='textile')
+            if self.textformat == 'textile':
+                text = pypandoc.convert_text(text, 'markdown_strict', format='textile')
 
             # pandoc does not convert everything, notably the [[link|text]] syntax
             # is not handled. So let's fix that.
@@ -85,7 +89,7 @@ class TextileConverter():
             text = text.replace("    \\*\\#", "    1.")
 
             # Redmine is using '>' for blockquote, which is not textile
-            text = text.replace("&gt; ", ">")
+            text = text.replace("&gt;", ">")
 
             # wiki note macros
             text = re.sub(self.regexTipMacro, r'---\n**TIP**: \1\n---\n', text, re.MULTILINE | re.DOTALL)
@@ -127,7 +131,7 @@ class WikiPageConverter():
     http://www.redmine.org/projects/redmine/wiki/RedmineTextFormattingTextile
     """
 
-    def __init__(self, local_repo_path, tree = False):
+    def __init__(self, local_repo_path, tree = False, textformat = 'textile'):
         self.repo_path = local_repo_path
         self.repo = Repo(local_repo_path)
 
@@ -138,7 +142,8 @@ class WikiPageConverter():
             log.error('You need at least pandoc 1.17.0, download from http://pandoc.org/installing.html')
             exit(1)
 
-        self.textile_converter = TextileConverter(tree)
+        self.textformat = textformat
+        self.textile_converter = TextileConverter(tree=tree, textformat=self.textformat)
 
     def convert(self, redmine_page):
         #title = self.textile_converter.normalize(redmine_page['path'])
@@ -148,7 +153,7 @@ class WikiPageConverter():
         text = redmine_page.get('text', "")
 
         # create a copy of the original page (for comparison, will not be committed)
-        file_name = title + ".textile"
+        file_name = title + '.src.' + self.textformat
         with open(self.repo_path + "/" + file_name, mode='wt', encoding='utf-8') as fd:
             print(text, file=fd)
 
@@ -157,6 +162,7 @@ class WikiPageConverter():
         text = text.replace("{{lastupdated_by}}", redmine_page["author"]["name"])
         text = text.replace("[[PageOutline]]", "")
         text = text.replace("{{>toc}}", "REPLACETOC")
+        text = text.replace("{{toc}}", "REPLACETOC")
 
         text = self.textile_converter.convert(text)
 

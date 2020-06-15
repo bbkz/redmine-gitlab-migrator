@@ -132,6 +132,12 @@ def parse_args():
         default=None,
         help="if account doesn't exists in GitLab use this account as default")
 
+    parser_issues.add_argument(
+        '--textformat',
+        action='store_true',
+        default='textile',
+        help="redmine textformat [textile](default) or [md]")
+
     parser_pages.add_argument(
         '--gitlab-wiki',
         required=True,
@@ -142,6 +148,11 @@ def parse_args():
         action='store_true',
         default=False,
         help="do not convert the history")
+
+    parser_pages.add_argument(
+        '--textformat',
+        default='textile',
+        help="redmine textformat [textile](default) or [md]")
 
     return parser.parse_args()
 
@@ -263,7 +274,7 @@ def perform_migrate_pages(args):
     pages.sort(key=lambda page: page["updated_on"])
 
     # Get copy of GitLab wiki repository
-    wiki = WikiPageConverter(args.gitlab_wiki, tree)
+    wiki = WikiPageConverter(args.gitlab_wiki, tree=tree, textformat=args.textformat)
 
     for page in pages:
         wiki.convert(page)
@@ -293,7 +304,7 @@ def perform_migrate_issues(args):
         gitlab_users_index = gitlab_instance.get_users_index()
     redmine_users_index = redmine_project.get_users_index()
     milestones_index = gitlab_project.get_milestones_index()
-    textile_converter = TextileConverter()
+    textile_converter = TextileConverter(textformat=args.textformat)
 
     log.debug('GitLab milestones are: {}'.format(', '.join(milestones_index) + ' '))
     # get issues
