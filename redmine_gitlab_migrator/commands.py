@@ -251,7 +251,10 @@ def perform_migrate_pages(args):
         for version in range(start_version, page["version"]+1):
             try:
                 full_page = redmine_project.get_page(page["title"], version)
-                full_page['path'] = tree[page['title']]
+                if page["title"] == 'WikiStart':
+                    full_page['path'] = tree['home']
+                else:
+                    full_page['path'] = tree[page['title']]
                 pages.append(full_page)
             except:
                 log.error("Error when retrieving " + page["title"] + ", version " + str(version))
