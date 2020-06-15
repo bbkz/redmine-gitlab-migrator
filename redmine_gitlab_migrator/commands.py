@@ -134,7 +134,6 @@ def parse_args():
 
     parser_issues.add_argument(
         '--textformat',
-        action='store_true',
         default='textile',
         help="redmine textformat [textile](default) or [md]")
 
